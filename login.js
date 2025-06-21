@@ -1,46 +1,76 @@
-window.addEventListener('DOMContentLoaded', () => {
+window.addEventListener("DOMContentLoaded", function () {
+  configurarFormularioLogin();
+});
 
-    const btn_login = document.getElementById("btn_login");
+function configurarFormularioLogin() {
+  const loginForm = document.getElementById("loginForm");
+  loginForm.addEventListener("submit", async function (event) {
+    event.preventDefault();
 
-    btn_login.addEventListener("click", async () => {
-        const usuario = document.getElementById("user").value;
-        const senha = document.getElementById("password").value;
-        const msg = document.getElementById('msg');
-        const spinner = document.getElementById("loading");
-
-        // spinner.style.display = "flex";
+    const password = document.getElementById("password").value.trim();
+    const usuario = document.getElementById("user").value;
 
 
-        try {
-            const response = await fetch("https://barretoapps.com.br/login", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ usuario, senha, conta: "none", currency:'none'})
-            });
+    if (!password || !usuario) {
+      exibirAlerta("A senha é obrigatória!");
+      return;
+    }
 
-            if (!response.ok) {
 
-                const errorData = await response.json();
-                msg.innerHTML = errorData.detail
-                return;
-            }
+    await validarCredenciais(password, usuario);
+  });
+}
 
-            const data = await response.json();
+async function validarCredenciais(password, usuario) {
+  const spinner = document.getElementById('loading');
+  spinner.style.display = 'flex';
 
-            // spinner.style.display = "none";
-            
-
-            sessionStorage.setItem("id_user", data.id_user);
-            sessionStorage.setItem("count_type", data.conta);
-            sessionStorage.setItem("logon", 1);
-            sessionStorage.setItem("user", usuario);
-            sessionStorage.setItem("currency",data.currency);
-            window.location.href = "dash.html";
-
-        } catch (error) {
-            console.error("Erro no login:", error);
-            alert("Erro na conexão com o servidor.");
-        }
+  try {
+    const response = await fetch("https://barretoapps.com.br/login_barreto", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ 
+        usuario: usuario,
+        senha: password 
+      })
     });
 
-});
+    const result = await response.json();
+    console.log("Resposta do backend:", result);
+
+    if (response.ok && result.success) {
+      spinner.style.display = 'none';
+      realizarLogin(result);
+    } else {
+      exibirAlerta(result.message || "Senha incorreta!");
+      spinner.style.display = 'none';
+    }
+  } catch (err) {
+    console.error("Erro no fetch:", err);
+    exibirAlerta("Erro ao tentar logar.");
+    spinner.style.display = 'none';
+  }
+}
+
+function realizarLogin(userData) {
+  sessionStorage.setItem("logon", "1");
+
+  let empresa = userData.empresa || "";
+  if (empresa.startsWith('"') && empresa.endsWith('"')) {
+    empresa = empresa.slice(1, -1);
+  }
+
+  document.getElementById('container-login').style.display = "none";
+
+
+  document.getElementById('tela').src = "dash.html";
+
+
+}
+
+
+function exibirAlerta(mensagem) {
+  const alert = document.getElementById("alert");
+  alert.innerText = mensagem;
+  alert.style.display = "block";
+}
